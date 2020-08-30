@@ -1,0 +1,124 @@
+using System;
+using System.Windows.Forms;
+using System.IO.Ports;
+using System.IO;
+
+
+namespace GetScale
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+         // this is what i need to read data from rice lack 720i balance
+
+        public const int BaudRate = 2400;
+        public const int DataBits = 7;
+        public const string PortName = "COM1";//this is the port name i use may change in your device
+        public SerialPort _serialPort;
+        private void Form1_Load(object sender, EventArgs e)
+        {
+              //<-- This block ensures that no exceptions happen
+            if (_serialPort != null && _serialPort.IsOpen)
+                _serialPort.Close();
+            if (_serialPort != null)
+                _serialPort.Dispose();
+            //<-- End of Block
+            try
+            {
+                _serialPort = new SerialPort(PortName, BaudRate, Parity.None, DataBits, StopBits.One);       //<-- Creates new SerialPort using the name of the port -->>
+                _serialPort.DataReceived += SerialPortOnDataReceived;       //<-- this event happens everytime when new data is received by the ComPort
+                _serialPort.Open();     //<-- make the comport listen
+            }
+            catch (IOException eio)
+            { 
+                Stopreadbtn.PerformClick();
+                timer1.Enabled = false;
+                MessageBox.Show(eio.Message,"warning",MessageBoxButtons.OK,MessageBoxIcon.Error);
+               
+
+            }
+
+        }
+        string value;
+        private delegate void Closure();
+        private void SerialPortOnDataReceived(object sender, SerialDataReceivedEventArgs serialDataReceivedEventArgs)
+        {
+            value = "";
+
+            _serialPort.DiscardNull = true;
+            _serialPort.ReadTimeout = 1000;
+
+          
+            //my try <<------------------------------!>>
+
+
+            //Start------------------->>>
+
+
+
+            if (InvokeRequired)     //<-- Makes sure the function is invoked to work properly in the UI-Thread
+                BeginInvoke(new Closure(() => { SerialPortOnDataReceived(sender, serialDataReceivedEventArgs); }));     //<-- Function invokes itself
+            else
+            {
+                int dataLength = _serialPort.BytesToRead;
+
+                _serialPort.DiscardNull = true;
+                //_serialPort.DiscardOutBuffer();
+                byte[] data = new byte[dataLength];
+
+
+                int nbrDataRead = _serialPort.Read(data, 0, dataLength);
+
+                if (nbrDataRead == 0)
+                    return;
+
+               
+
+                //<<-----------------new comment
+
+
+                for (int i = 5; i < data.Length - 5; i++)
+                {
+
+                    if (data[i] != 0)
+                    {
+                        value += (char)data[i];
+                    }
+
+                }
+                if ((value.Length - 5 > 0) && (value != null && value != ""))
+                {
+                    value = value.Remove(value.Length - 5);
+                }
+
+
+                //--------------------- End Comment >>
+
+
+
+
+
+                if ((value.Length - 5 > 0) && (value != null ))
+                {
+                    value = value.Remove(value.Length - 5);
+                }
+                int numout = -1;
+                if (value != null)
+                {
+                   
+                        if (int.TryParse(value, out numout ))
+                        {
+
+                            this.Data.Text = value.ToString();
+                        }
+                    
+                }
+            }
+
+ 
+            //End---------------------->>>
+
+        }
